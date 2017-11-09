@@ -72,6 +72,8 @@ tf.app.flags.DEFINE_boolean("use_fp16", False,
                             "Train using fp16 instead of fp32.")
 tf.app.flags.DEFINE_boolean("use_lstm", False,
                             "Model using LSTM instead of GRU.")
+tf.app.flags.DEFINE_boolean("attention", False,
+                            "Use Attention Seq2Seq.")
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -136,16 +138,16 @@ def create_model(session, forward_only):
       FLAGS.batch_size,
       FLAGS.learning_rate,
       FLAGS.learning_rate_decay_factor,
-      use_lstm = FLAGS.use_lstm,
+      use_lstm=FLAGS.use_lstm,
       forward_only=forward_only,
       dtype=dtype)
   ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
-  if ckpt and tf.gfile.Exists(ckpt.model_checkpoint_path):
+  if ckpt:
     print("Reading model parameters from %s" % ckpt.model_checkpoint_path)
     model.saver.restore(session, ckpt.model_checkpoint_path)
   else:
     print("Created model with fresh parameters.")
-    session.run(tf.initialize_all_variables())
+    session.run(tf.global_variables_initializer())
   return model
 
 
@@ -154,12 +156,11 @@ def train():
       FLAGS.data_dir, FLAGS.en_vocab_size, FLAGS.fr_vocab_size)
   _, rev_fr_vocab = data_utils.initialize_vocabulary(fr_vocab_path)
   
-
   with tf.Session(config=config) as sess:
     # Create model.
     print("Creating %d layers of %d units." % (FLAGS.num_layers, FLAGS.size))
     model = create_model(sess, False)
-
+    summary_writer = tf.summary.FileWriter(FLAGS.train_dir, graph=sess.graph)
     # Read data into buckets and compute their sizes.
     print ("Reading training data (limit: %d)."
            % FLAGS.max_train_data_size)
@@ -209,6 +210,7 @@ def train():
         checkpoint_path = os.path.join(FLAGS.train_dir, "translate.ckpt")
         model.saver.save(sess, checkpoint_path, global_step=model.global_step)
         step_time, loss = 0.0, 0.0
+        summary_writer.flush()
         # output train/hyp
         out_batch_size = output_logits[0].shape[0]
         rand_idx = np.random.randint(0, out_batch_size)
