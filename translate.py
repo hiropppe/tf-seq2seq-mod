@@ -72,7 +72,7 @@ tf.app.flags.DEFINE_boolean("use_fp16", False,
                             "Train using fp16 instead of fp32.")
 tf.app.flags.DEFINE_boolean("use_lstm", False,
                             "Model using LSTM instead of GRU.")
-tf.app.flags.DEFINE_boolean("attention", False,
+tf.app.flags.DEFINE_boolean("attention", True,
                             "Use Attention Seq2Seq.")
 
 FLAGS = tf.app.flags.FLAGS
@@ -139,6 +139,7 @@ def create_model(session, forward_only):
       FLAGS.learning_rate,
       FLAGS.learning_rate_decay_factor,
       use_lstm=FLAGS.use_lstm,
+      attention=FLAGS.attention,
       forward_only=forward_only,
       dtype=dtype)
   ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
@@ -334,7 +335,8 @@ def decode():
     sentence = sys.stdin.readline()
     while sentence:
       # Get token-ids for the input sentence.
-      token_ids = data_utils.sentence_to_token_ids(tf.compat.as_bytes(sentence), en_vocab)
+      token_ids = data_utils.sentence_to_token_ids(tf.compat.as_bytes(sentence),
+        en_vocab, tokenizer=data_utils.japanese_tokenizer)
       # Which bucket does it belong to?
       bucket_id = min([b for b in xrange(len(_buckets))
                        if _buckets[b][0] > len(token_ids)])

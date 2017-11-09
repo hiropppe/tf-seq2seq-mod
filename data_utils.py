@@ -19,6 +19,7 @@ from __future__ import division
 from __future__ import print_function
 
 import gzip
+import MeCab
 import os
 import re
 import tarfile
@@ -48,6 +49,7 @@ _DIGIT_RE = re.compile(br"\d")
 _WMT_ENFR_TRAIN_URL = "http://www.statmt.org/wmt10/training-giga-fren.tar"
 _WMT_ENFR_DEV_URL = "http://www.statmt.org/wmt15/dev-v2.tgz"
 
+tagger = MeCab.Tagger("-Owakati")
 
 def maybe_download(directory, filename, url):
   """Download filename from url unless it's already in directory."""
@@ -101,6 +103,13 @@ def get_wmt_enfr_dev_set(directory):
       dev_tar.extract(fr_dev_file, directory)
       dev_tar.extract(en_dev_file, directory)
   return dev_path
+
+
+def japanese_tokenizer(sentence):
+    assert type(sentence) is str
+
+    result = tagger.parse(sentence)
+    return result.split()
 
 
 def basic_tokenizer(sentence):
